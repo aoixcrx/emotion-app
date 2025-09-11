@@ -1,15 +1,15 @@
-# Core
+# Streamlit
 streamlit==1.37.0
 
-# Machine Learning / Deep Learning (CPU)
+# PyTorch (CPU version for better compatibility)
 torch==2.8.0
 torchvision==0.23.0
 torchaudio==2.8.0
 
-# Image Processing
-Pillow>=11.0.0
+# Image processing (compatible with Streamlit)
+Pillow>=7.1.0,<11
 
-# Data Handling
+# Data processing
 numpy==2.1.2
 pandas==2.2.3
 
@@ -17,6 +17,10 @@ pandas==2.2.3
 matplotlib==3.9.2
 seaborn==0.13.2
 
-# Utils
+# Machine learning
 scikit-learn==1.5.2
 scipy==1.14.1
+
+# Optional: If you need specific ML libraries
+# tensorflow==2.18.0  # Uncomment if needed
+# opencv-python==4.10.0.84  # Uncomment if needed
