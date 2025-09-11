@@ -1,8 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 streamlit==1.37.0
 torch==2.2.0+cpu
 torchvision==0.17.0+cpu
---extra-index-url https://download.pytorch.org/whl/cpu
-
 Pillow==10.2.0
 numpy==1.26.4
 plotly==5.23.0
