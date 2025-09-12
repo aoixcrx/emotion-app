@@ -157,6 +157,22 @@ def load_model():
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None, device
+    try:
+        # โหลด checkpoint
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+
+        if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+            from timm import create_model
+            model = create_model("efficientnet_b3", pretrained=False, num_classes=7)
+            model.load_state_dict(checkpoint["state_dict"], strict=False)
+        else:
+            model = checkpoint
+
+        # 🔥 บังคับให้เป็น float32 เสมอ
+        model = model.float().to(device).eval()
+
+        return model, device
+
 
 
 # ✅ เรียกใช้งานทันที
@@ -380,6 +396,7 @@ if uploaded_image is not None and model is not None:
 #         return None, device
 
 
+
 # model, device = load_model()
 
 # # Main Content Area
@@ -532,6 +549,7 @@ if uploaded_image is not None and model is not None:
 # </div>
 
 # """, unsafe_allow_html=True)
+
 
 
 
