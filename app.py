@@ -150,7 +150,7 @@ with col1:
 
     # Load Model
    @st.cache_resource
-def load_model(model_name='efficientnet_b3_checkpoint_fold1.pt', debug=False):
+   def load_model(model_name='efficientnet_b3_checkpoint_fold1.pt', debug=False):
     """
     Load PyTorch model with comprehensive error handling and debugging
     
@@ -404,6 +404,7 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
 
