@@ -127,20 +127,67 @@ def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_path = "efficientnet_b3_checkpoint_fold1.pt"
 
+    # ดาวน์โหลดถ้าไม่มี
     if not os.path.exists(model_path):
         url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
         gdown.download(url, model_path, quiet=False)
 
     try:
-        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
-        if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
-            from timm import create_model
-            model = create_model("efficientnet_b3", pretrained=False, num_classes=4)
-            model.load_state_dict(checkpoint["state_dict"], strict=False)
+        checkpoint = torch.load(model_path, map_location=device)
+        model = None
+
+        # --- กรณีเป็น checkpoint dict (Lightning / state_dict) ---
+        if isinstance(checkpoint, dict):
+            # หากมี key "state_dict" ให้เอาอันนั้นก่อน
+            if "state_dict" in checkpoint:
+                state_dict = checkpoint["state_dict"]
+            else:
+                # อาจเป็น state_dict โดยตรง
+                state_dict = checkpoint
+
+            if isinstance(state_dict, dict):
+                # แปลงทุก tensor ใน state_dict เป็น float32 ก่อนโหลด
+                sd_float = {}
+                for k, v in state_dict.items():
+                    if isinstance(v, torch.Tensor):
+                        sd_float[k] = v.to(torch.float32)
+                    else:
+                        sd_float[k] = v
+
+                # สร้าง model skeleton ที่เหมาะสม แล้วโหลด weights
+                # ปรับชื่อโมเดล/num_classes ตามของคุณ
+                from timm import create_model
+                model = create_model("efficientnet_b3", pretrained=False, num_classes=4)
+                model.load_state_dict(sd_float, strict=False)
+            else:
+                # ถ้า checkpoint เป็น object โมเดลเลย
+                model = checkpoint
         else:
+            # checkpoint เป็นโมเดลเต็มที่ถูกบันทึก (torch.save(model))
             model = checkpoint
-        model = model.to(torch.float32).eval()
+
+        # ย้ายโมเดลไป device
+        model.to(device)
+
+        # บังคับแปลงทุก parameter & buffer ให้เป็น float32 (เขียนทับ .data เพื่อความแน่นอน)
+        for p in model.parameters():
+            p.data = p.data.to(torch.float32)
+            if p.grad is not None:
+                p.grad.data = p.grad.data.to(torch.float32)
+        for b in model.buffers():
+            b.data = b.data.to(torch.float32)
+
+        model.eval()
+
+        # debug/info: แสดง dtype ของพารามิเตอร์แรก (ช่วยตรวจสอบ)
+        try:
+            first_dtype = next(model.parameters()).dtype
+            st.info(f"Model loaded on {device} with param dtype={first_dtype}")
+        except Exception:
+            pass
+
         return model, device
+
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None, device
@@ -515,6 +562,7 @@ if uploaded_image is not None and model is not None:
 # </div>
 
 # """, unsafe_allow_html=True)
+
 
 
 
