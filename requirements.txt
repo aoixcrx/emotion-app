@@ -2,6 +2,7 @@ streamlit
 torch
 torchvision  
 torchaudio
+lightning
 opencv-python-headless
 matplotlib
 seaborn
