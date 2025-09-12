@@ -133,9 +133,9 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.markdown("### Image Upload")
     
-    # Load Model
-    @st.cache_resource
-    def load_model():
+# Load Model
+@st.cache_resource
+def load_model():
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model_path = "efficientnet_b3_checkpoint_fold1.pt"
     
@@ -143,15 +143,19 @@ with col1:
     if not os.path.exists(model_path):
         url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
         gdown.download(url, model_path, quiet=False)
-    def load_model():
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         try:
             model = torch.load('efficientnet_b3_checkpoint_fold1.pt',map_location=device,weights_only=False)
             return model, device
         except:
             st.error("Model file not found! Please check the path.")
             return None, device
-    model, device = load_model()
+    # โหลดโมเดล
+    try:
+        model = torch.load(model_path, map_location=device)
+        return model, device
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None, device
 
     # File Upload Section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -297,4 +301,5 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
