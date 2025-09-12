@@ -142,7 +142,7 @@ def load_model():
         gdown.download(url, model_path, quiet=False)
         try:
             model = torch.load('efficientnet_b3_checkpoint_fold1.pt', map_location=device, weights_only=False)
-            model = model.float()  
+            model = model.float().eval()
             return model, device
         except:
             st.error("Model file not found! Please check the path.")
@@ -150,7 +150,8 @@ def load_model():
     # โหลดโมเดล
     try:
         model = torch.load(model_path, map_location=device, weights_only=False)
-        model = model.float()
+        # model = model.half() 
+        model = model.float().eval()
         return model, device
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -309,6 +310,7 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
 
