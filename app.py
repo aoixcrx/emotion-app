@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import torch
 from PIL import Image
@@ -5,6 +6,8 @@ from prediction import pred_class
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+import gdown
+
 
 # Page Configuration
 st.set_page_config(
@@ -302,6 +305,7 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
 
