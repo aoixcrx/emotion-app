@@ -134,19 +134,64 @@ with col1:
     st.markdown("### Image Upload")
 
 
+    # # Load Model
+    # @st.cache_resource
+    # def load_model():
+    #     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    #     try:
+    #         model = torch.load('efficientnet_b3_checkpoint_fold1.pt',map_location=device,weights_only=False)
+    #         return model, device
+    #     except:
+    #         st.error("Model file not found! Please check the path.")
+    #         return None, device
+
+
+    # model, device = load_model()
+
     # Load Model
     @st.cache_resource
     def load_model():
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        model_path = 'efficientnet_b3_checkpoint_fold1.pt'
+        
+        # Debug: ตรวจสอบไฟล์
+        st.write(f"🔍 Looking for model at: {model_path}")
+        st.write(f"📁 Current directory: {os.getcwd()}")
+        
+        # แสดงไฟล์ทั้งหมดในไดเรกทอรี่
+        import os
+        files_in_dir = os.listdir(".")
+        st.write("📋 Files in current directory:")
+        for file in files_in_dir:
+            if file.endswith('.pt'):
+                file_size = os.path.getsize(file) / (1024*1024)  # MB
+                st.write(f"  ✅ {file} ({file_size:.2f} MB)")
+            else:
+                st.write(f"  📄 {file}")
+        
+        # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
+        if not os.path.exists(model_path):
+            st.error(f"❌ Model file '{model_path}' not found!")
+            
+            # หาไฟล์ .pt ทั้งหมด
+            pt_files = [f for f in files_in_dir if f.endswith('.pt')]
+            if pt_files:
+                st.warning(f"🔧 Found these .pt files instead: {pt_files}")
+                # ใช้ไฟล์ .pt แรกที่เจอ
+                model_path = pt_files[0]
+                st.info(f"🔄 Trying to use: {model_path}")
+            else:
+                st.error("🚫 No .pt files found in directory!")
+                return None, device
+        
         try:
-            model = torch.load('efficientnet_b3_checkpoint_fold1.pt',map_location=device,weights_only=False)
+            st.info(f"📥 Loading model from: {model_path}")
+            model = torch.load(model_path, map_location=device, weights_only=False)
+            st.success("✅ Model loaded successfully!")
             return model, device
-        except:
-            st.error("Model file not found! Please check the path.")
+        except Exception as e:
+            st.error(f"❌ Error loading model: {str(e)}")
             return None, device
-
-
-    model, device = load_model()
 
     # File Upload Section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -292,4 +337,5 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
