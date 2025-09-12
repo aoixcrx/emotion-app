@@ -141,7 +141,7 @@ with col1:
         try:
             model = torch.load(
                 # r"D:\CNN\newmodel\mobilenetv3_large_100_checkpoint_fold2.pt",
-                r"D:\CNN\newmodel\efficientnet_b3_checkpoint_fold1.pt",
+                "efficientnet_b3_checkpoint_fold1.pt",
                 map_location=device,
                 weights_only=False
             )
@@ -295,4 +295,5 @@ st.markdown("""
     <p>Powered by <strong>Deep Learning</strong> | Built with using <strong>Streamlit</strong></p>
     <p><small>For best results, use clear images with visible faces</small></p>
 </div>
+
 """, unsafe_allow_html=True)
