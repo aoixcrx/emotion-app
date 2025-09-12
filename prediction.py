@@ -32,8 +32,11 @@ def pred_class(
     ])
 
     # 🔹 Ensure model on correct device
+    # device = next(model.parameters()).device
+    # model = model.to(torch.float32).eval()   # force float32 + eval mode
     device = next(model.parameters()).device
-    model = model.to(torch.float32).eval()   # force float32 + eval mode
+    model = model.to(device).float().eval()   # force float32
+
 
     with torch.inference_mode():
         # Transform image → [1, C, H, W]
@@ -107,6 +110,7 @@ def pred_class(
 #       prob = target_image_pred_probs.cpu().numpy()
 
 #     return prob
+
 
 
 
