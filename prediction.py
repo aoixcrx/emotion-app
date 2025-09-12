@@ -33,13 +33,13 @@ def pred_class(model: torch.nn.Module,
     # 5. Turn on model evaluation mode and inference mode
     model.eval()
     with torch.inference_mode():
-      # 6. Transform and add an extra dimension to image (model requires samples in [batch_size, color_channels, height, width])
-      transformed_image = image_transform(img).unsqueeze(dim=0).float()
+      # # 6. Transform and add an extra dimension to image (model requires samples in [batch_size, color_channels, height, width])
+      # transformed_image = image_transform(img).unsqueeze(dim=0).float()
 
-      # 7. Make a prediction on image with an extra dimension and send it to the target device
-      target_image_pred = model(transformed_image.to(device))
-      # transformed_image = image_transform(img).unsqueeze(0).to(device).float()
-      # target_image_pred = model(transformed_image)
+      # # 7. Make a prediction on image with an extra dimension and send it to the target device
+      # target_image_pred = model(transformed_image.to(device))
+      transformed_image = image_transform(img).unsqueeze(0).to(device).to(torch.float32)
+      target_image_pred = model(transformed_image)
 
 
       # 8. Convert logits -> prediction probabilities (using torch.softmax() for multi-class classification)
@@ -52,5 +52,6 @@ def pred_class(model: torch.nn.Module,
       prob = target_image_pred_probs.cpu().numpy()
 
     return prob
+
 
 
