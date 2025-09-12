@@ -148,7 +148,7 @@ def load_model():
             return None, device
     # โหลดโมเดล
     try:
-        model = torch.load(model_path, map_location=device)
+        model = torch.load(model_path, map_location=device,weights_only=False)
         return model, device
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -305,6 +305,7 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
 
