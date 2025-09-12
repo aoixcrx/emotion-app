@@ -135,6 +135,15 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.markdown("### Image Upload")
 
+    # File Upload Section (อยู่ใน col1)
+    st.markdown('<div class="upload-section">', unsafe_allow_html=True)
+    uploaded_image = st.file_uploader(
+        'Drop your image here or click to browse',
+        type=['jpg', 'jpeg', 'png'],
+        help="Supported formats: JPG, JPEG, PNG"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # ===== Download model if not exists =====
 def download_model():
     if not os.path.exists("efficientnet_b3_checkpoint_fold1.pt"):
@@ -313,5 +322,6 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
