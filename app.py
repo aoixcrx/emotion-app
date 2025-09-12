@@ -5,8 +5,6 @@ from prediction import pred_class
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import gdown
-import os
 
 # Page Configuration
 st.set_page_config(
@@ -135,48 +133,20 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.markdown("### Image Upload")
 
-    # File Upload Section (อยู่ใน col1)
-    st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-    uploaded_image = st.file_uploader(
-        'Drop your image here or click to browse',
-        type=['jpg', 'jpeg', 'png'],
-        help="Supported formats: JPG, JPEG, PNG"
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
 
-# ===== Download model if not exists =====
-def download_model():
-    if not os.path.exists("efficientnet_b3_checkpoint_fold1.pt"):
-        url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
-        gdown.download(url, "efficientnet_b3_checkpoint_fold1.pt", quiet=False)
-
-@st.cache_resource
-def load_model():
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    try:
-        download_model()
-        model = torch.load("efficientnet_b3_checkpoint_fold1.pt", map_location=device)
-        return model, device
-    except Exception as e:
-        st.error(f"Model file not found or failed to load: {str(e)}")
-        return None, device
-
-model, device = load_model()
-# model = torch.load("efficientnet_b3_checkpoint_fold1.pt", map_location=device)
-
-#     # Load Model
-#     @st.cache_resource
-#     def load_model():
-#         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#         try:
-#             model = torch.load('./efficientnet_b3_checkpoint_fold1.pt',map_location=device,weights_only=False)
-#             return model, device
-#         except:
-#             st.error("Model file not found! Please check the path.")
-#             return None, device
+    # Load Model
+    @st.cache_resource
+    def load_model():
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        try:
+            model = torch.load('efficientnet_b3_checkpoint_fold1.pt',map_location=device,weights_only=False)
+            return model, device
+        except:
+            st.error("Model file not found! Please check the path.")
+            return None, device
 
 
-#     model, device = load_model()
+    model, device = load_model()
 
     # File Upload Section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -322,6 +292,3 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
-
-
-
