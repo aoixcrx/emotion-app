@@ -149,51 +149,116 @@ with col1:
     # model, device = load_model()
 
     # Load Model
-    @st.cache_resource
-    def load_model():
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        model_path = 'efficientnet_b3_checkpoint_fold1.pt'
-        
-        # Debug: ตรวจสอบไฟล์
-        st.write(f"🔍 Looking for model at: {model_path}")
-        st.write(f"📁 Current directory: {os.getcwd()}")
-        
-        # แสดงไฟล์ทั้งหมดในไดเรกทอรี่
-        import os
-        files_in_dir = os.listdir(".")
+   @st.cache_resource
+def load_model(model_name='efficientnet_b3_checkpoint_fold1.pt', debug=False):
+    """
+    Load PyTorch model with comprehensive error handling and debugging
+    
+    Args:
+        model_name (str): Name of the model file to load
+        debug (bool): Whether to show detailed debugging information
+    
+    Returns:
+        tuple: (model, device) where model is the loaded PyTorch model and device is the torch device
+    """
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model_path = Path(model_name)
+    
+    if debug:
+        st.write(f"🔍 Looking for model at: {model_path.absolute()}")
+        st.write(f"📁 Current directory: {Path.cwd()}")
+        st.write(f"🖥️ Using device: {device}")
+    
+    # List all files in current directory
+    current_dir = Path(".")
+    all_files = list(current_dir.iterdir())
+    pt_files = [f for f in all_files if f.suffix == '.pt']
+    
+    if debug:
         st.write("📋 Files in current directory:")
-        for file in files_in_dir:
-            if file.endswith('.pt'):
-                file_size = os.path.getsize(file) / (1024*1024)  # MB
-                st.write(f"  ✅ {file} ({file_size:.2f} MB)")
-            else:
-                st.write(f"  📄 {file}")
+        for file in all_files:
+            if file.suffix == '.pt':
+                try:
+                    file_size = file.stat().st_size / (1024*1024)  # MB
+                    st.write(f"  ✅ {file.name} ({file_size:.2f} MB)")
+                except OSError:
+                    st.write(f"  ⚠️ {file.name} (size unknown)")
+            elif file.is_file():
+                st.write(f"  📄 {file.name}")
+    
+    # Check if the specified model file exists
+    if not model_path.exists():
+        st.error(f"❌ Model file '{model_name}' not found!")
         
-        # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
-        if not os.path.exists(model_path):
-            st.error(f"❌ Model file '{model_path}' not found!")
-            
-            # หาไฟล์ .pt ทั้งหมด
-            pt_files = [f for f in files_in_dir if f.endswith('.pt')]
-            if pt_files:
-                st.warning(f"🔧 Found these .pt files instead: {pt_files}")
-                # ใช้ไฟล์ .pt แรกที่เจอ
-                model_path = pt_files[0]
-                st.info(f"🔄 Trying to use: {model_path}")
-            else:
-                st.error("🚫 No .pt files found in directory!")
-                return None, device
-        
-        try:
-            st.info(f"📥 Loading model from: {model_path}")
-            model = torch.load(model_path, map_location=device, weights_only=False)
-            st.success("✅ Model loaded successfully!")
-            return model, device
-        except Exception as e:
-            st.error(f"❌ Error loading model: {str(e)}")
+        if pt_files:
+            st.warning(f"🔧 Found these .pt files instead: {[f.name for f in pt_files]}")
+            # Use the first .pt file found
+            model_path = pt_files[0]
+            st.info(f"🔄 Trying to use: {model_path.name}")
+        else:
+            st.error("🚫 No .pt files found in directory!")
+            st.info("💡 Make sure to upload your model file to the app directory")
             return None, device
-model, device = load_model()
+    
+    try:
+        st.info(f"📥 Loading model from: {model_path.name}")
+        
+        # Load model with progress indicator
+        with st.spinner("Loading model..."):
+            # Check file size for large models
+            file_size_mb = model_path.stat().st_size / (1024*1024)
+            if file_size_mb > 100:
+                st.warning(f"⏳ Large model detected ({file_size_mb:.1f} MB). This may take a while...")
+            
+            model = torch.load(model_path, map_location=device, weights_only=False)
+        
+        # Validate model structure
+        if hasattr(model, 'eval'):
+            model.eval()  # Set to evaluation mode
+            st.success("✅ Model loaded and set to evaluation mode!")
+        else:
+            st.warning("⚠️ Model loaded but doesn't have eval() method")
+        
+        # Show model info if debug is enabled
+        if debug:
+            try:
+                total_params = sum(p.numel() for p in model.parameters())
+                trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+                st.info(f"📊 Model parameters: {total_params:,} total, {trainable_params:,} trainable")
+            except:
+                st.info("📊 Could not calculate model parameters")
+        
+        return model, device
+        
+    except FileNotFoundError:
+        st.error(f"❌ File not found: {model_path}")
+        return None, device
+    except RuntimeError as e:
+        if "PytorchStreamReader" in str(e):
+            st.error("❌ Corrupted model file. Please re-download the model.")
+        else:
+            st.error(f"❌ Runtime error loading model: {str(e)}")
+        return None, device
+    except Exception as e:
+        st.error(f"❌ Unexpected error loading model: {str(e)}")
+        st.info("💡 Try uploading a fresh copy of the model file")
+        return None, device
 
+# Usage examples:
+if __name__ == "__main__":
+    # Basic usage
+    model, device = load_model()
+    
+    # With debugging enabled
+    # model, device = load_model(debug=True)
+    
+    # With custom model name
+    # model, device = load_model('my_custom_model.pt', debug=True)
+    
+    if model is not None:
+        st.success("🎉 Model ready for inference!")
+    else:
+        st.error("🚫 Failed to load model. Check the logs above.")
 
     # File Upload Section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -339,6 +404,7 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
 
