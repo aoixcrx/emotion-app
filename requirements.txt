@@ -11,3 +11,5 @@ pandas
 numpy
 plotly
 gdown
+timm
+
