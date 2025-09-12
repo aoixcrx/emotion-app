@@ -127,12 +127,6 @@ with st.sidebar:
     st.markdown("### Model Info")
     st.info("Using ResNet-50 architecture trained on emotion dataset")
 
-# Main Content Area
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    st.markdown("### Image Upload")
-    
 # Load Model
 @st.cache_resource
 def load_model():
@@ -156,15 +150,22 @@ def load_model():
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None, device
+model, device = load_model()
 
-    # File Upload Section
-    st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-    uploaded_image = st.file_uploader(
-        'Drop your image here or click to browse',
-        type=['jpg', 'jpeg', 'png'],
-        help="Supported formats: JPG, JPEG, PNG"
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+# Main Content Area
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.markdown("### Image Upload")
+    
+# File Upload Section
+st.markdown('<div class="upload-section">', unsafe_allow_html=True)
+uploaded_image = st.file_uploader(
+    'Drop your image here or click to browse',
+    type=['jpg', 'jpeg', 'png'],
+    help="Supported formats: JPG, JPEG, PNG"
+)
+st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
     st.markdown("### Image Preview")
@@ -301,5 +302,6 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
