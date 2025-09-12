@@ -148,254 +148,52 @@ with col1:
 
     # model, device = load_model()
 
-#     # Load Model
-#     @st.cache_resource
-#     def load_model():
-#         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#         model_path = 'efficientnet_b3_checkpoint_fold1.pt'
+    # Load Model
+    @st.cache_resource
+    def load_model():
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        model_path = 'efficientnet_b3_checkpoint_fold1.pt'
         
-#         # Debug: ตรวจสอบไฟล์
-#         st.write(f"🔍 Looking for model at: {model_path}")
-#         st.write(f"📁 Current directory: {os.getcwd()}")
+        # Debug: ตรวจสอบไฟล์
+        st.write(f"🔍 Looking for model at: {model_path}")
+        st.write(f"📁 Current directory: {os.getcwd()}")
         
-#         # แสดงไฟล์ทั้งหมดในไดเรกทอรี่
-#         import os
-#         files_in_dir = os.listdir(".")
-#         st.write("📋 Files in current directory:")
-#         for file in files_in_dir:
-#             if file.endswith('.pt'):
-#                 file_size = os.path.getsize(file) / (1024*1024)  # MB
-#                 st.write(f"  ✅ {file} ({file_size:.2f} MB)")
-#             else:
-#                 st.write(f"  📄 {file}")
-        
-#         # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
-#         if not os.path.exists(model_path):
-#             st.error(f"❌ Model file '{model_path}' not found!")
-            
-#             # หาไฟล์ .pt ทั้งหมด
-#             pt_files = [f for f in files_in_dir if f.endswith('.pt')]
-#             if pt_files:
-#                 st.warning(f"🔧 Found these .pt files instead: {pt_files}")
-#                 # ใช้ไฟล์ .pt แรกที่เจอ
-#                 model_path = pt_files[0]
-#                 st.info(f"🔄 Trying to use: {model_path}")
-#             else:
-#                 st.error("🚫 No .pt files found in directory!")
-#                 return None, device
-        
-#         try:
-#             st.info(f"📥 Loading model from: {model_path}")
-#             model = torch.load(model_path, map_location=device, weights_only=False)
-#             st.success("✅ Model loaded successfully!")
-#             return model, device
-#         except Exception as e:
-#             st.error(f"❌ Error loading model: {str(e)}")
-#             return None, device
-# model, device = load_model()
-
-
-#     # File Upload Section
-#     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-#     uploaded_image = st.file_uploader(
-#         'Drop your image here or click to browse',
-#         type=['jpg', 'jpeg', 'png'],
-#         help="Supported formats: JPG, JPEG, PNG"
-#     )
-#     st.markdown('</div>', unsafe_allow_html=True)
-
-# with col2:
-#     st.markdown("### Image Preview")
-
-#     if uploaded_image is not None:
-#         image = Image.open(uploaded_image).convert('RGB')
-#         st.image(
-#             image,
-#             caption=f'{uploaded_image.name}',
-#             use_container_width=True
-#         )
-
-#         # Image info
-#         st.markdown(f"""
-#         <div class="info-box">
-#             <strong>Image Details:</strong><br>
-#             Size : {image.size[0]} x {image.size[1]} pixels<br>
-#             Format : {uploaded_image.type}<br>
-#             File size : {len(uploaded_image.getvalue()) / 1024:.1f} KB
-#         </div>
-#         """, unsafe_allow_html=True)
-#     else:
-#         st.markdown("""
-#         <div style="text-align: center; padding: 3rem; color: #666;">
-#             <h3>No Image Selected</h3>
-#             <p>Please upload an image to see the preview</p>
-#         </div>
-#         """, unsafe_allow_html=True)
-
-# # Prediction Section
-# if uploaded_image is not None and model is not None:
-#     st.markdown("---")
-
-#     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-#     with col_btn2:
-#         predict_button = st.button('Analyze Emotion', use_container_width=True)
-
-#     if predict_button:
-#         with st.spinner('Analyzing emotion... Please wait'):
-#             try:
-#                 class_name = ['Fear', 'Happy', 'Neutral', 'Sad']
-#                 emoji_map = {'Fear': '😨', 'Happy': '😊', 'Neutral': '😐', 'Sad': '😢'}
-#                 color_map = {'Fear': 'emotion-fear', 'Happy': 'emotion-happy',
-#                              'Neutral': 'emotion-neutral', 'Sad': 'emotion-sad'}
-
-#                 # Get prediction
-#                 probli = pred_class(model, image, class_name)
-#                 max_index = np.argmax(probli[0])
-
-#                 # Results Section
-#                 st.markdown("## Prediction Results")
-
-#                 # Create two columns for results
-#                 result_col1, result_col2 = st.columns([2, 1])
-
-#                 with result_col1:
-#                     st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
-
-#                     # Display results with styling
-#                     for i, (emotion, prob) in enumerate(zip(class_name, probli[0])):
-#                         emoji = emoji_map[emotion]
-#                         percentage = prob * 100
-#                         is_max = (i == max_index)
-
-#                         # Create styled result
-#                         if is_max:
-#                             st.markdown(f"""
-#                             <div class="emotion-result {color_map[emotion]}" style="border: 3px solid #gold;">
-#                                 <h3 style="margin:0; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
-#                                     {emoji} <strong>{emotion}</strong>: {percentage:.1f}%
-#                                 </h3>
-#                                 <p style="margin:0; color: white; font-size: 0.9em;">Primary Detection</p>
-#                             </div>
-#                             """, unsafe_allow_html=True)
-#                         else:
-#                             st.markdown(f"""
-#                             <div style="padding: 0.5rem; margin: 0.3rem 0; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ddd;">
-#                                 <span style="font-size: 1.1em;">{emoji} {emotion}: <strong>{percentage:.1f}%</strong></span>
-#                             </div>
-#                             """, unsafe_allow_html=True)
-
-#                     st.markdown('</div>', unsafe_allow_html=True)
-
-#                 with result_col2:
-#                     # Create a donut chart
-#                     fig = go.Figure(data=[go.Pie(
-#                         labels=[f"{emoji_map[emotion]} {emotion}" for emotion in class_name],
-#                         values=[prob * 100 for prob in probli[0]],
-#                         hole=.3,
-#                         marker_colors=['#ff6b6b', '#56ab2f', '#95a5a6', '#4a90e2']
-#                     )])
-
-#                     fig.update_traces(textposition='inside', textinfo='percent+label')
-#                     fig.update_layout(
-#                         title="Emotion Distribution",
-#                         annotations=[dict(text='Confidence', x=0.5, y=0.5, font_size=16, showarrow=False)],
-#                         height=400,
-#                         showlegend=False
-#                     )
-
-#                     st.plotly_chart(fig, use_container_width=True)
-
-#                 # Confidence indicator
-#                 max_confidence = probli[0][max_index] * 100
-#                 if max_confidence > 80:
-#                     confidence_color = "green"
-#                     confidence_text = "High Confidence"
-#                 elif max_confidence > 60:
-#                     confidence_color = "orange"
-#                     confidence_text = "Medium Confidence"
-#                 else:
-#                     confidence_color = "red"
-#                     confidence_text = "Low Confidence"
-
-#                 st.markdown(f"""
-#                 <div style="text-align: center; margin: 2rem 0;">
-#                     <span style="background: {confidence_color}; color: white; padding: 0.5rem 1rem; 
-#                     border-radius: 20px; font-weight: bold;">
-#                         {confidence_text}: {max_confidence:.1f}%
-#                     </span>
-#                 </div>
-#                 """, unsafe_allow_html=True)
-
-#             except Exception as e:
-#                 st.error(f"Error during prediction: {str(e)}")
-#                 st.info("Please make sure the model file exists and the prediction function works correctly.")
-
-# # Footer
-# st.markdown("---")
-# st.markdown("""
-# <div style="text-align: center; color: #666; padding: 2rem;">
-#     <p>Powered by <strong>Deep Learning</strong> | Built with using <strong>Streamlit</strong></p>
-#     <p><small>For best results, use clear images with visible faces</small></p>
-# </div>
-
-# """, unsafe_allow_html=True)
-
-# Load Model
-@st.cache_resource
-def load_model():
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model_path = 'efficientnet_b3_checkpoint_fold1.pt'
-    
-    # Debug: ตรวจสอบไฟล์
-    st.write(f"🔍 Looking for model at: {model_path}")
-    st.write(f"📁 Current directory: {os.getcwd()}")
-    
-    # แสดงไฟล์ทั้งหมดในไดเรกทอรี่
-    import os
-    files_in_dir = os.listdir(".")
-    st.write("📋 Files in current directory:")
-    for file in files_in_dir:
-        if file.endswith('.pt'):
-            try:
+        # แสดงไฟล์ทั้งหมดในไดเรกทอรี่
+        import os
+        files_in_dir = os.listdir(".")
+        st.write("📋 Files in current directory:")
+        for file in files_in_dir:
+            if file.endswith('.pt'):
                 file_size = os.path.getsize(file) / (1024*1024)  # MB
                 st.write(f"  ✅ {file} ({file_size:.2f} MB)")
-            except:
-                st.write(f"  ❓ {file} (cannot get size)")
-        else:
-            st.write(f"  📄 {file}")
-    
-    # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
-    if not os.path.exists(model_path):
-        st.error(f"❌ Model file '{model_path}' not found!")
+            else:
+                st.write(f"  📄 {file}")
         
-        # หาไฟล์ .pt ทั้งหมด
-        pt_files = [f for f in files_in_dir if f.endswith('.pt')]
-        if pt_files:
-            st.warning(f"🔧 Found these .pt files instead: {pt_files}")
-            # ใช้ไฟล์ .pt แรกที่เจอ
-            model_path = pt_files[0]
-            st.info(f"🔄 Trying to use: {model_path}")
-        else:
-            st.error("🚫 No .pt files found in directory!")
+        # ตรวจสอบว่าไฟล์มีอยู่หรือไม่
+        if not os.path.exists(model_path):
+            st.error(f"❌ Model file '{model_path}' not found!")
+            
+            # หาไฟล์ .pt ทั้งหมด
+            pt_files = [f for f in files_in_dir if f.endswith('.pt')]
+            if pt_files:
+                st.warning(f"🔧 Found these .pt files instead: {pt_files}")
+                # ใช้ไฟล์ .pt แรกที่เจอ
+                model_path = pt_files[0]
+                st.info(f"🔄 Trying to use: {model_path}")
+            else:
+                st.error("🚫 No .pt files found in directory!")
+                return None, device
+        
+        try:
+            st.info(f"📥 Loading model from: {model_path}")
+            model = torch.load(model_path, map_location=device, weights_only=False)
+            st.success("✅ Model loaded successfully!")
+            return model, device
+        except Exception as e:
+            st.error(f"❌ Error loading model: {str(e)}")
             return None, device
-    
-    try:
-        st.info(f"📥 Loading model from: {model_path}")
-        model = torch.load(model_path, map_location=device, weights_only=False)
-        st.success("✅ Model loaded successfully!")
-        return model, device
-    except Exception as e:
-        st.error(f"❌ Error loading model: {str(e)}")
-        return None, device
-
-# โหลดโมเดล
 model, device = load_model()
 
-# Main Content Area
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    st.markdown("### Image Upload")
 
     # File Upload Section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -414,16 +212,16 @@ with col2:
         st.image(
             image,
             caption=f'{uploaded_image.name}',
-            width='stretch'  # แก้ไขจาก use_container_width=True
+            use_container_width=True
         )
 
         # Image info
         st.markdown(f"""
         <div class="info-box">
             <strong>Image Details:</strong><br>
-            Size: {image.size[0]} x {image.size[1]} pixels<br>
-            Format: {uploaded_image.type}<br>
-            File size: {len(uploaded_image.getvalue()) / 1024:.1f} KB
+            Size : {image.size[0]} x {image.size[1]} pixels<br>
+            Format : {uploaded_image.type}<br>
+            File size : {len(uploaded_image.getvalue()) / 1024:.1f} KB
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -440,7 +238,7 @@ if uploaded_image is not None and model is not None:
 
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
-        predict_button = st.button('Analyze Emotion')  # ลบ use_container_width=True
+        predict_button = st.button('Analyze Emotion', use_container_width=True)
 
     if predict_button:
         with st.spinner('Analyzing emotion... Please wait'):
@@ -505,7 +303,7 @@ if uploaded_image is not None and model is not None:
                         showlegend=False
                     )
 
-                    st.plotly_chart(fig)  # ลบ use_container_width=True
+                    st.plotly_chart(fig, use_container_width=True)
 
                 # Confidence indicator
                 max_confidence = probli[0][max_index] * 100
@@ -532,17 +330,17 @@ if uploaded_image is not None and model is not None:
                 st.error(f"Error during prediction: {str(e)}")
                 st.info("Please make sure the model file exists and the prediction function works correctly.")
 
-elif uploaded_image is not None and model is None:
-    st.warning("⚠️ Model not loaded. Please check the model file.")
-
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
-    <p>Powered by <strong>Deep Learning</strong> | Built with <strong>Streamlit</strong></p>
+    <p>Powered by <strong>Deep Learning</strong> | Built with using <strong>Streamlit</strong></p>
     <p><small>For best results, use clear images with visible faces</small></p>
 </div>
+
 """, unsafe_allow_html=True)
+
+
 
 
 
