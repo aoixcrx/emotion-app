@@ -139,12 +139,7 @@ with col1:
     def load_model():
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         try:
-            model = torch.load(
-                # r"D:\CNN\newmodel\mobilenetv3_large_100_checkpoint_fold2.pt",
-                "efficientnet_b3_checkpoint_fold1.pt",
-                map_location=device,
-                weights_only=False
-            )
+            model = torch.load('efficientnet_b3_checkpoint_fold1.pt',map_location=device,weights_only=False)
             return model, device
         except:
             st.error("Model file not found! Please check the path.")
@@ -297,3 +292,4 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
