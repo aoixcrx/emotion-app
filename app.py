@@ -192,6 +192,8 @@ with col1:
         except Exception as e:
             st.error(f"❌ Error loading model: {str(e)}")
             return None, device
+model, device = load_model()
+
 
     # File Upload Section
     st.markdown('<div class="upload-section">', unsafe_allow_html=True)
@@ -337,5 +339,6 @@ st.markdown("""
 </div>
 
 """, unsafe_allow_html=True)
+
 
 
