@@ -28,9 +28,5 @@ def pred_class(model: torch.nn.Module, image: Image.Image, class_names: List[str
         output = model(input_tensor)
         probs = torch.softmax(output, dim=1)
     
-    # 5. ดึง class และ probability
-    pred_label_idx = torch.argmax(probs, dim=1).item()   # convert tensor -> int
-    pred_classname = class_names[pred_label_idx]
-    pred_prob = probs[0, pred_label_idx].item()          # probability ของ class ที่ predict
-
-    return pred_classname, pred_prob
+    # 5. ส่งคืน probabilities ทั้งหมดเป็น list
+    return [probs[0].cpu().numpy()]
