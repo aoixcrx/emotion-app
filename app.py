@@ -709,7 +709,7 @@ def create_css_with_banner():
     .section-title {{
         font-size: 1.5rem;
     }}
-
+}}
 .upload-section {{
     background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
     padding: 2.5rem;
@@ -852,7 +852,7 @@ h1, h2, h3 {{
 }}
 
 /* Responsive Design */
-@media (max-width: 768px) 
+@media (max-width: 768px) {{
     .about-container {{
         grid-template-columns: 1fr;
         gap: 2rem;
@@ -1045,16 +1045,13 @@ def load_model():
 
     # ถ้าไฟล์ไม่มีให้โหลดจาก Google Drive
     if not os.path.exists(model_path):
-        url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
-        gdown.download(url, model_path, quiet=False)
         try:
-            model = torch.load(model_path, map_location=device, weights_only=False)
-            model = model.float() 
-            model.eval()
-            return model, device
-        except:
-            st.error("Model file not found! Please check the path.")
+            url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
+            gdown.download(url, model_path, quiet=False)
+        except Exception as e:
+            st.error(f"Error downloading model: {e}")
             return None, device
+    
     # โหลดโมเดล
     try:
         model = torch.load(model_path, map_location=device, weights_only=False)
@@ -1065,9 +1062,24 @@ def load_model():
         st.error(f"Error loading model: {e}")
         return None, device
 
-
-
 model, device = load_model()
+
+# ฟังก์ชันทำนาย
+def predict_image(image, transform):
+    if model is None:
+        st.error("Model not loaded!")
+        return None
+
+    img_tensor = transform(image).unsqueeze(0).to(device)
+
+    # บังคับ input เป็น float32 ให้ตรงกับ model
+    img_tensor = img_tensor.float()
+
+    with torch.no_grad():
+        outputs = model(img_tensor)
+        _, predicted = torch.max(outputs, 1)
+
+    return predicted.item()
 
 # Main Content Area
 col1, col2 = st.columns([1, 1])
