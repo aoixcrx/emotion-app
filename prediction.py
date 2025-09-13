@@ -8,9 +8,13 @@ def pred_class(model: torch.nn.Module, image: Image.Image, class_names: List[str
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # 1. ส่งโมเดลไป device
+    # 1. ส่งโมเดลไป device และบังคับให้เป็น float32
     model.to(device)
+    model = model.float()  # บังคับให้ model เป็น float32
     model.eval()
+    
+    # Debug: ตรวจสอบ model dtype
+    print(f"Model dtype after conversion: {next(model.parameters()).dtype}")
     
     # 2. สร้าง transform
     transform = transforms.Compose([
@@ -22,19 +26,12 @@ def pred_class(model: torch.nn.Module, image: Image.Image, class_names: List[str
     
     # 3. แปลง image เป็น tensor + batch dimension
     input_tensor = transform(image).unsqueeze(0).to(device)
+    input_tensor = input_tensor.float()  # บังคับให้ input เป็น float32
     
-    # 4. แปลง input ให้ตรงกับ model precision
-    try:
-        model_dtype = next(model.parameters()).dtype
-        if model_dtype == torch.float16:
-            input_tensor = input_tensor.half()
-        elif model_dtype == torch.float32:
-            input_tensor = input_tensor.float()
-    except Exception as e:
-        # ถ้าไม่สามารถตรวจสอบ dtype ได้ ให้ใช้ float32
-        input_tensor = input_tensor.float()
+    # Debug: ตรวจสอบ input dtype
+    print(f"Input tensor dtype: {input_tensor.dtype}")
     
-    # 5. inference
+    # 4. inference
     with torch.no_grad():
         output = model(input_tensor)
         probs = torch.softmax(output, dim=1)
