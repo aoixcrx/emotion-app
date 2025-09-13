@@ -1137,7 +1137,7 @@ with col2:
     """, unsafe_allow_html=True)
 
     if uploaded_image is not None and image is not None:
-        st.image(uploaded_image, use_column_width=True)
+        st.image(uploaded_image, use_container_width=True)
         file_type = getattr(uploaded_image, 'type', 'unknown')
         file_size_kb = len(uploaded_image.getvalue()) / 1024
         st.markdown(f"""
