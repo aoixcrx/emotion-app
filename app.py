@@ -1160,12 +1160,6 @@ with col2:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Analyze Emotion", type="primary", use_container_width=True):
             with st.spinner("Analyzing emotions..."):
-                # ที่นี่คุณสามารถเพิ่มโค้ดสำหรับการวิเคราะห์อารมณ์
-                # ตัวอย่าง:
-                # result = analyze_emotion(uploaded_image)
-                # st.success("Analysis completed!")
-                # st.write(result)
-                
                 # Placeholder สำหรับผลลัพธ์
                 st.success("Analysis completed!")
                 st.info("Emotion analysis results will be displayed here")
