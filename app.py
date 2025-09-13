@@ -1049,8 +1049,8 @@ def load_model():
         url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
         gdown.download(url, model_path, quiet=False)
         try:
-            model = torch.load('efficientnet_b3_checkpoint_fold1.pt', map_location=device, weights_only=False)
-            model = model.to(torch.float32)   # 🔥 บังคับทุก layer/param เป็น float32
+            model = torch.load(model_path, map_location=device, weights_only=False)
+            model = model.float() 
             model.eval()
             return model, device
         except:
@@ -1059,7 +1059,7 @@ def load_model():
     # โหลดโมเดล
     try:
         model = torch.load(model_path, map_location=device, weights_only=False)
-        model = model.to(torch.float32)   # 🔥 บังคับทุก layer/param เป็น float32
+        model = model.float() 
         model.eval()
         return model, device
     except Exception as e:
