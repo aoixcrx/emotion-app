@@ -33,7 +33,7 @@ def pred_class(model: torch.nn.Module,
     model.eval()
     with torch.inference_mode():
         # 6. Transform and add an extra dimension to image (model requires samples in [batch_size, color_channels, height, width])
-        transformed_image = image_transform(img).unsqueeze(dim=0).float()
+        transformed_image = image_transform(image).unsqueeze(dim=0).float()
         output = model(transformed_image.to(device))
 
         # 7. Make a prediction on image with an extra dimension and send it to the target device
