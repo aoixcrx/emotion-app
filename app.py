@@ -31,7 +31,6 @@ def get_base64_of_bin_file(bin_file):
         return None
 
 def create_css_with_banner():
-    # ลองหาไฟล์ banner จากหลายตำแหน่ง
     banner_paths = ["banner01.png", "images/banner01.png", "assets/banner01.png", "./banner01.png"]
     banner_base64 = None
     banner_found = False
