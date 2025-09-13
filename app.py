@@ -1055,7 +1055,7 @@ def load_model():
     # โหลดโมเดล
     try:
         model = torch.load(model_path, map_location=device, weights_only=False)
-        model = model.float() 
+        # ไม่บังคับให้เป็น float() เพื่อรักษา precision เดิม
         model.eval()
         return model, device
     except Exception as e:
