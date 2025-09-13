@@ -28,24 +28,34 @@ def pred_class(model: torch.nn.Module, image: Image.Image, class_names: List[str
     # ปิด warning เกี่ยวกับ dtype
     warnings.filterwarnings("ignore", category=UserWarning)
     
-    # บังคับให้ model และ input ใช้ float32
-    model = model.float()
-    input_tensor = input_tensor.float()
+    # ตรวจสอบ model dtype และปรับ input ให้ตรงกัน
+    try:
+        model_dtype = next(model.parameters()).dtype
+        print(f"Model dtype: {model_dtype}")
+        
+        if model_dtype == torch.float16:
+            # Model ต้องการ Half precision
+            input_tensor = input_tensor.half()
+        elif model_dtype == torch.float32:
+            # Model ต้องการ Float precision
+            input_tensor = input_tensor.float()
+        elif model_dtype == torch.float64:
+            # Model ต้องการ Double precision
+            input_tensor = input_tensor.double()
+        else:
+            # Default: ใช้ float32
+            model = model.float()
+            input_tensor = input_tensor.float()
+            
+    except Exception as e:
+        # ถ้าไม่สามารถตรวจสอบได้ ให้ใช้ float32
+        model = model.float()
+        input_tensor = input_tensor.float()
     
     # 4. inference
     with torch.no_grad():
-        try:
-            output = model(input_tensor)
-            probs = torch.softmax(output, dim=1)
-        except RuntimeError as e:
-            if "expected scalar type Half but found Float" in str(e):
-                # ถ้า error เกี่ยวกับ Half/Float ให้ลองใช้ double
-                model = model.double()
-                input_tensor = input_tensor.double()
-                output = model(input_tensor)
-                probs = torch.softmax(output, dim=1)
-            else:
-                raise e
+        output = model(input_tensor)
+        probs = torch.softmax(output, dim=1)
     
     # 5. ส่งคืน probabilities ทั้งหมดเป็น list
     return [probs[0].cpu().numpy()]
