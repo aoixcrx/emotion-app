@@ -23,7 +23,18 @@ def pred_class(model: torch.nn.Module, image: Image.Image, class_names: List[str
     # 3. แปลง image เป็น tensor + batch dimension
     input_tensor = transform(image).unsqueeze(0).to(device)
     
-    # 4. inference
+    # 4. แปลง input ให้ตรงกับ model precision
+    try:
+        model_dtype = next(model.parameters()).dtype
+        if model_dtype == torch.float16:
+            input_tensor = input_tensor.half()
+        elif model_dtype == torch.float32:
+            input_tensor = input_tensor.float()
+    except Exception as e:
+        # ถ้าไม่สามารถตรวจสอบ dtype ได้ ให้ใช้ float32
+        input_tensor = input_tensor.float()
+    
+    # 5. inference
     with torch.no_grad():
         output = model(input_tensor)
         probs = torch.softmax(output, dim=1)
