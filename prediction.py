@@ -39,13 +39,13 @@ def pred_class(model: torch.nn.Module,
       # 7. Make a prediction on image with an extra dimension and send it to the target device
       target_image_pred = model(transformed_image.to(device))
 
-      # 8. Convert logits -> prediction probabilities (using torch.softmax() for multi-class classification)
-      target_image_pred_probs = torch.softmax(target_image_pred, dim=1)
+    # 8. Convert logits -> prediction probabilities (using torch.softmax() for multi-class classification)
+    target_image_pred_probs = torch.softmax(target_image_pred, dim=1)
 
-      # 9. Convert prediction probabilities -> prediction labels
-      target_image_pred_label = torch.argmax(target_image_pred_probs, dim=1)
+    # 9. Convert prediction probabilities -> prediction labels
+    target_image_pred_label = torch.argmax(target_image_pred_probs, dim=1)
 
-      classname =  class_names[target_image_pred_label]
-      prob = target_image_pred_probs.cpu().numpy()
+    classname =  class_names[target_image_pred_label]
+    prob = target_image_pred_probs.cpu().numpy()
 
     return prob
