@@ -1055,7 +1055,7 @@ def load_model():
     # โหลดโมเดล
     try:
         model = torch.load(model_path, map_location=device, weights_only=False)
-        model = model.float()  # บังคับให้เป็น float32 เพื่อป้องกัน dtype mismatch
+        # ไม่บังคับ dtype เพื่อรักษา precision เดิมของ model
         model.eval()
         return model, device
     except Exception as e:
@@ -1148,7 +1148,7 @@ with col2:
     """, unsafe_allow_html=True)
 
     if uploaded_image is not None and image is not None:
-        st.image(uploaded_image, use_container_width=True)
+        st.image(uploaded_image, width='stretch')
         file_type = getattr(uploaded_image, 'type', 'unknown')
         file_size_kb = len(uploaded_image.getvalue()) / 1024
         st.markdown(f"""
@@ -1169,7 +1169,7 @@ with col2:
         
         # ปุ่มสำหรับวิเคราะห์อารมณ์
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Analyze Emotion", type="primary", use_container_width=True):
+        if st.button("Analyze Emotion", type="primary", width='stretch'):
             with st.spinner("Analyzing emotions..."):
                 # Placeholder สำหรับผลลัพธ์
                 st.success("Analysis completed!")
@@ -1270,7 +1270,7 @@ if uploaded_image is not None and model is not None:
                         showlegend=False
                     )
 
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
                 # Confidence indicator
                 max_confidence = probli[0][max_index] * 100
