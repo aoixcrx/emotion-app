@@ -1,61 +1,51 @@
+## Making Pridcition return class & prob
 from typing import List, Tuple
 import torch
-from torchvision import transforms
+import torchvision.transforms as T
 from PIL import Image
-import warnings
 
-def pred_class(model: torch.nn.Module, image: Image.Image, class_names: List[str],
-               image_size: Tuple[int, int] = (300, 300), device=None):
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def pred_class(model: torch.nn.Module, image, class_names: List[str],image_size: Tuple[int, int] = (224, 224), ):
     
-    # 1. ส่งโมเดลไป device
+    # 2. Open image
+    img = image
+
+    # 3. Create transformation for image (if one doesn't exist)
+    image_transform = T.Compose([
+            T.Resize(image_size),
+            T.ToTensor(),
+            T.Normalize(mean=[0.485, 0.456, 0.406],
+                        std=[0.229, 0.224, 0.225]),
+        ])
+    
+    ### Predict on image ### 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # 4. Make sure the model is on the target device
     model.to(device)
+    
+    # 5. Turn on model evaluation mode and inference mode
     model.eval()
+    with torch.inference_mode():
+      # 6. Transform and add an extra dimension to image (model requires samples in [batch_size, color_channels, height, width])
+      #transformed_image = image_transform(image).unsqueeze(dim=0).float()
+      #transformed_image = image_transform(image).unsqueeze(0).float().to(device)
+      transformed_image = image_transform(image).unsqueeze(0).to(device)
+      # 7. Make a prediction on image with an extra dimension and send it to the target device
+      #target_image_pred = model(transformed_image.to(device))
+      output = model(transformed_image)
+      probs = torch.softmax(output, dim=1)
+      label_idx = torch.argmax(probs, dim=1).item()  # convert tensor to int
+    # 8. Convert logits -> prediction probabilities (using torch.softmax() for multi-class classification)
+    #target_image_pred_probs = torch.softmax(target_image_pred, dim=1)
     
-    # 2. สร้าง transform
-    transform = transforms.Compose([
-        transforms.Resize(image_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                             std=[0.229, 0.224, 0.225])
-    ])
+    # 9. Convert prediction probabilities -> prediction labels
+    #target_image_pred_label = torch.argmax(target_image_pred_probs, dim=1)
+    classname = class_names[label_idx]
+    #probability = float(probs.item())  # ✅ แปลงให้เป็น float
+    probability = probs[0, label_idx].item()  # probability of predicted class
     
-    # 3. แปลง image เป็น tensor + batch dimension
-    input_tensor = transform(image).unsqueeze(0).to(device)
-    
-    # 4. จัดการ dtype mismatch ด้วยวิธีที่ปลอดภัย
-    # ปิด warning เกี่ยวกับ dtype
-    warnings.filterwarnings("ignore", category=UserWarning)
-    
-    # ตรวจสอบ model dtype และปรับ input ให้ตรงกัน
-    try:
-        model_dtype = next(model.parameters()).dtype
-        print(f"Model dtype: {model_dtype}")
-        
-        if model_dtype == torch.float16:
-            # Model ต้องการ Half precision
-            input_tensor = input_tensor.half()
-        elif model_dtype == torch.float32:
-            # Model ต้องการ Float precision
-            input_tensor = input_tensor.float()
-        elif model_dtype == torch.float64:
-            # Model ต้องการ Double precision
-            input_tensor = input_tensor.double()
-        else:
-            # Default: ใช้ float32
-            model = model.float()
-            input_tensor = input_tensor.float()
-            
-    except Exception as e:
-        # ถ้าไม่สามารถตรวจสอบได้ ให้ใช้ float32
-        model = model.float()
-        input_tensor = input_tensor.float()
-    
-    # 4. inference
-    with torch.no_grad():
-        output = model(input_tensor)
-        probs = torch.softmax(output, dim=1)
-    
-    # 5. ส่งคืน probabilities ทั้งหมดเป็น list
-    return [probs[0].cpu().numpy()]
+    return classname, probability
+    #classname =  class_names[target_image_pred_label]
+    #prob = target_image_pred_probs.cpu().numpy()
+
+    #return prob
