@@ -1,14 +1,30 @@
 import streamlit as st
 import torch
+from collections import OrderedDict
+from torch.serialization import safe_globals
+import lightning.fabric.wrappers
+from pytorch_lightning import LightningModule
+import plotly.express as px
 from PIL import Image
 from prediction import pred_class
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 import os
 import base64
 import io
 import gdown
+import timm
+from torchvision import transforms
+
+# Fix for PyTorch 2.2.0 compatibility
+try:
+    from torch.cuda.amp import GradScaler
+except ImportError:
+    try:
+        from torch.amp import GradScaler
+    except ImportError:
+        # Fallback for older versions
+        GradScaler = None
 
 # Page Configuration
 st.set_page_config(
@@ -492,10 +508,6 @@ def create_css_with_banner():
     0%, 100% {{ opacity: 0.5; }} /* เริ่มและจบครึ่งโปร่งใส */
     50% {{ opacity: 1; }}        /* กลาง animation เต็มความชัด */
 }}
-@keyframes borderGlow {{
-    0%, 100% {{ opacity: 0.5; }}
-    50% {{ opacity: 1; }}
-}}
 
 .section-title::after {{
     content: "";
@@ -612,17 +624,6 @@ def create_css_with_banner():
 }}
 
 /* Animations */
-@keyframes fadeInUp {{
-    from {{
-        opacity: 0;
-        transform: translateY(30px);
-    }}
-    to {{
-        opacity: 1;
-        transform: translateY(0);
-    }}
-}}
-
 @keyframes slideInStep {{
     from {{
         opacity: 0;
@@ -631,27 +632,6 @@ def create_css_with_banner():
     to {{
         opacity: 1;
         transform: translateY(0) scale(1);
-    }}
-}}
-
-@keyframes borderGlow {{
-    0%, 100% {{
-        opacity: 0.5;
-    }}
-    50% {{
-        opacity: 0.8;
-    }}
-}}
-
-@keyframes float {{
-    0%, 100% {{
-        transform: translate(0, 0) rotate(0deg);
-    }}
-    33% {{
-        transform: translate(10px, -10px) rotate(5deg);
-    }}
-    66% {{
-        transform: translate(-10px, 10px) rotate(-5deg);
     }}
 }}
 
@@ -904,21 +884,12 @@ h1, h2, h3 {{
     color: #fff !important;
 }}
 
-.about-title::after {{
-    background: linear-gradient(90deg, #2146a0 0%, #112e63 100%);
-    box-shadow: 0 0 12px #2146a0, 0 0 2px #112e63;
-}}
-
 .emotions-title::after {{
     background: #2146a0;
 }}
 
 .info-box {{
     border: 1px solid #2146a0;
-}}
-
-h1, h2, h3 {{
-    color: #ffffff !important;
 }}
 
 @media (max-width: 480px) {{
@@ -1037,13 +1008,62 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# กำหนดชื่อคลาสอารมณ์ที่โมเดลสามารถทำนายได้
+class_names = ["Fear", "Happy", "Neutral", "Sad"]
+
+# ฟังก์ชันทำนายที่แก้ไขแล้ว
+def pred_class(model, image, class_names, device='cpu'):
+    """
+    ฟังก์ชันทำนายอารมณ์จากภาพ
+    
+    Args:
+        model: โมเดล PyTorch ที่โหลดแล้ว
+        image: PIL Image object
+        class_names: รายชื่อคลาสอารมณ์
+        device: device ที่ใช้ ('cpu' หรือ 'cuda')
+    
+    Returns:
+        tuple: (predicted_class_name, confidence_score, all_probabilities)
+    """
+    try:
+        # Image preprocessing
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                               std=[0.229, 0.224, 0.225])
+        ])
+        
+        # Transform image
+        img_tensor = transform(image).unsqueeze(0).to(device)
+        img_tensor = img_tensor.float()
+        
+        # Prediction
+        model.eval()
+        with torch.no_grad():
+            outputs = model(img_tensor)
+            probabilities = torch.nn.functional.softmax(outputs, dim=1)
+            predicted_idx = torch.argmax(probabilities, dim=1).item()
+            confidence = probabilities[0][predicted_idx].item()
+            
+        # Get all probabilities
+        all_probs = probabilities[0].cpu().numpy()
+        predicted_class = class_names[predicted_idx]
+        
+        return predicted_class, confidence, all_probs
+        
+    except Exception as e:
+        st.error(f"Error in prediction: {str(e)}")
+        return None, 0.0, None
+
 # Load Model
 @st.cache_resource
 def load_model():
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model_path = "efficientnet_b3_checkpoint_fold1.pt"
 
-    # ถ้าไฟล์ไม่มีให้โหลดจาก Google Drive
+    model_path = "efficientnet_b3_checkpoint_fold1.pt"
+    device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+    
+    # ถ้าไฟล์ไม่มี ให้ดาวน์โหลดก่อน
     if not os.path.exists(model_path):
         try:
             url = "https://drive.google.com/uc?id=1TUVnEHkl3fd-5olrDR-wTlkGFKakAIaB"
@@ -1051,35 +1071,48 @@ def load_model():
         except Exception as e:
             st.error(f"Error downloading model: {e}")
             return None, device
-    
-    # โหลดโมเดล
+        
+    # ✅ โหลด checkpoint แบบ allow Lightning class
     try:
-        model = torch.load(model_path, map_location=device, weights_only=False)
-        # ไม่บังคับ dtype เพื่อรักษา precision เดิมของ model
+        with safe_globals([lightning.fabric.wrappers._FabricModule]):
+            ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None, device
+        
+    # ดึง state_dict จาก checkpoint
+    if isinstance(ckpt, dict) and "state_dict" in ckpt:
+        state_dict = ckpt["state_dict"]
+    else:
+        # fallback: ถ้าโหลดได้เป็น object ให้ดึง state_dict() โดยตรง
+        try:
+            state_dict = ckpt.state_dict()
+        except Exception:
+            st.error("Checkpoint format not supported.{e}")
+            return None, device
+    
+    # สร้างโมเดล
+    model = timm.create_model('efficientnet_b3', pretrained=False, num_classes=4)
+    
+    # map key ให้ตรง (ลบ prefix 'model.' ที่ Lightning ชอบใส่)
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        new_key = k.replace("model.", "")
+        new_state_dict[new_key] = v
+    
+    # โหลดน้ำหนัก
+    try:
+        model.load_state_dict(new_state_dict, strict=False)
+        model.to(device)
         model.eval()
         return model, device
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None, device
+       
 
+# เรียกใช้
 model, device = load_model()
-
-# ฟังก์ชันทำนาย
-def predict_image(image, transform):
-    if model is None:
-        st.error("Model not loaded!")
-        return None
-
-    img_tensor = transform(image).unsqueeze(0).to(device)
-
-    # บังคับ input เป็น float32 ให้ตรงกับ model
-    img_tensor = img_tensor.float()
-
-    with torch.no_grad():
-        outputs = model(img_tensor)
-        _, predicted = torch.max(outputs, 1)
-
-    return predicted.item()
 
 # Main Content Area
 col1, col2 = st.columns([1, 1])
@@ -1114,11 +1147,17 @@ with col1:
     # สร้างตัวแปร uploaded_image สำหรับการอัปโหลดไฟล์
     uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
     
-    # กำหนดตัวแปร image เพื่อป้องกัน NameError
+    # แสดงภาพเฉพาะในคอลัมน์แรก
     image = None
     if uploaded_image is not None:
-        from PIL import Image
-        image = Image.open(uploaded_image)
+        image = Image.open(uploaded_image).convert("RGB")
+        st.image(image, caption="Uploaded Image", use_container_width=True)
+       
+        #if 'current_image' not in st.session_state or st.session_state.current_image != uploaded_image.name:
+           #st.session_state.prediction_done = False
+           #st.session_state.prediction_result = None
+           #st.session_state.current_image = uploaded_image.name
+
 
 with col2:
     st.markdown("""
@@ -1148,7 +1187,7 @@ with col2:
     """, unsafe_allow_html=True)
 
     if uploaded_image is not None and image is not None:
-        st.image(uploaded_image, width='stretch')
+        #st.image(uploaded_image, width='stretch')
         file_type = getattr(uploaded_image, 'type', 'unknown')
         file_size_kb = len(uploaded_image.getvalue()) / 1024
         st.markdown(f"""
@@ -1169,11 +1208,34 @@ with col2:
         
         # ปุ่มสำหรับวิเคราะห์อารมณ์
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Analyze Emotion", type="primary", width='stretch'):
+        # ใช้ session state เพื่อจัดการการแสดงผล
+        if 'prediction_done' not in st.session_state:
+            st.session_state.prediction_done = False
+            
+        if st.button("Analyze Emotion", type="primary", width='stretch',use_container_width=True):
             with st.spinner("Analyzing emotions..."):
-                # Placeholder สำหรับผลลัพธ์
-                st.success("Analysis completed!")
-                st.info("Emotion analysis results will be displayed here")
+                if model is not None:
+                    try:
+                        # เรียกใช้ฟังก์ชันทำนาย
+                        predicted_class, confidence, all_probs = pred_class(model, image, class_names, device)
+                        
+                        if predicted_class is not None:
+                            # เก็บผลลัพธ์ใน session state
+                            st.session_state.prediction_result = {
+                                'predicted_class': predicted_class,
+                                'confidence': confidence,
+                                'all_probs': all_probs
+                            }
+                            st.session_state.prediction_done = True
+                            st.success(f"Analysis completed! Predicted: {predicted_class}")
+                            st.info(f"Confidence: {confidence*100:.1f}%")
+                        else:
+                            st.error("Failed to analyze emotion")
+                            
+                    except Exception as e:
+                        st.error(f"Error during prediction: {str(e)}")
+                else:
+                    st.error("Model not loaded properly")
     else:
         st.markdown("""
         <div style="
@@ -1191,114 +1253,105 @@ with col2:
         </div>
         """, unsafe_allow_html=True)
 
-# ตรวจสอบว่าตัวแปร uploaded_image มีค่าหรือไม่ก่อนใช้งาน
-if uploaded_image is not None:
-    # ประมวลผลรูปภาพที่อัปโหลด
-    pass
-else:
-    # กรณีที่ไม่มีรูปภาพ
-    pass
 
+# Initialize session state
+if 'prediction_done' not in st.session_state:
+    st.session_state.prediction_done = False
+if 'prediction_result' not in st.session_state:
+    st.session_state.prediction_result = None
+    
 # Prediction Section
-if uploaded_image is not None and model is not None:
+if uploaded_image is not None and model is not None and st.session_state.prediction_done and st.session_state.prediction_result is not None:
     st.markdown("---")
+    
+    # ดึงผลลัพธ์จาก session state
+    result = st.session_state.prediction_result
+    predicted_class = result['predicted_class']
+    confidence = result['confidence']
+    all_probs = result['all_probs']
+    
+    emoji_map = {'Fear': '😨', 'Happy': '😊', 'Neutral': '😐', 'Sad': '😢'}
+    color_map = {'Fear': 'emotion-fear', 'Happy': 'emotion-happy',
+                 'Neutral': 'emotion-neutral', 'Sad': 'emotion-sad'}
+    
+    # Results Section
+    st.markdown("## Prediction Results")
+    
+    # Create two columns for results
+    result_col1, result_col2 = st.columns([2, 1])
 
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-    with col_btn2:
-        predict_button = st.button('Analyze Emotion')
+    with result_col1:
+        #st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
+        
+        max_index = np.argmax(all_probs)
+        
+        # Display results with styling
+        for i, (emotion, prob) in enumerate(zip(class_names, all_probs)):
+            emoji = emoji_map[emotion]
+            percentage = prob * 100
+            is_max = (i == max_index)
 
-    if predict_button:
-        with st.spinner('Analyzing emotion... Please wait'):
-            try:
-                class_name = ['Fear', 'Happy', 'Neutral', 'Sad']
-                emoji_map = {'Fear': '😨', 'Happy': '😊', 'Neutral': '😐', 'Sad': '😢'}
-                color_map = {'Fear': 'emotion-fear', 'Happy': 'emotion-happy',
-                             'Neutral': 'emotion-neutral', 'Sad': 'emotion-sad'}
-
-                # Get prediction
-                probli = pred_class(model, image, class_name)
-                max_index = int(np.argmax(probli[0]))
-
-                # Results Section
-                st.markdown("## Prediction Results")
-
-                # Create two columns for results
-                result_col1, result_col2 = st.columns([2, 1])
-
-                with result_col1:
-                    st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
-
-                    # Display results with styling
-                    for i, (emotion, prob) in enumerate(zip(class_name, probli[0])):
-                        emoji = emoji_map[emotion]
-                        percentage = prob * 100
-                        is_max = (i == max_index)
-
-                        # Create styled result
-                        if is_max:
-                            st.markdown(f"""
-                            <div class="emotion-result {color_map[emotion]}" style="border: 3px solid gold;">
-                                <h3 style="margin:0; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
-                                    {emoji} <strong>{emotion}</strong>: {percentage:.1f}%
-                                </h3>
-                                <p style="margin:0; color: white; font-size: 0.9em;">Primary Detection</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        else:
-                            st.markdown(f"""
-                            <div style="padding: 0.5rem; margin: 0.3rem 0; background: #f8faff; border-radius: 8px; border-left: 4px solid #5897c2;">
-                                <span style="font-size: 1.1em; color: #112e63;">{emoji} {emotion}: <strong>{percentage:.1f}%</strong></span>
-                            </div>
-                            """, unsafe_allow_html=True)
-
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                with result_col2:
-                    # Create a donut chart with brand colors
-                    fig = go.Figure(data=[go.Pie(
-                        labels=[f"{emoji_map[emotion]} {emotion}" for emotion in class_name],
-                        values=[prob * 100 for prob in probli[0]],
-                        hole=.3,
-                        marker_colors=["#254e94", '#4caf50', '#607d8b', '#5897c2']
-                    )])
-
-                    fig.update_traces(textposition='inside', textinfo='percent+label')
-                    fig.update_layout(
-                        title="Emotion Distribution",
-                        annotations=[dict(text='Confidence', x=0.5, y=0.5, font_size=16, showarrow=False)],
-                        height=400,
-                        showlegend=False
-                    )
-
-                    st.plotly_chart(fig, width='stretch')
-
-                # Confidence indicator
-                max_confidence = probli[0][max_index] * 100
-                if max_confidence > 80:
-                    confidence_color = "#4caf50"
-                    confidence_text = "High Confidence"
-                elif max_confidence > 60:
-                    confidence_color = "#5897c2"
-                    confidence_text = "Medium Confidence"
-                else:
-                    confidence_color = "#f44336"
-                    confidence_text = "Low Confidence"
-
+            # Create styled result
+            if is_max:
                 st.markdown(f"""
-                <div style="text-align: center; margin: 2rem 0;">
-                    <span style="background: {confidence_color}; color: white; padding: 0.5rem 1rem; 
-                    border-radius: 20px; font-weight: bold;">
-                        🎯 {confidence_text}: {max_confidence:.1f}%
-                    </span>
+                <div class="emotion-result {color_map[emotion]}" style="border: 3px solid gold;">
+                    <h3 style="margin:0; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                        {emoji} <strong>{emotion}</strong>: {percentage:.1f}%
+                    </h3>
+                    <p style="margin:0; color: white; font-size: 0.9em;">Primary Detection</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="padding: 0.5rem; margin: 0.3rem 0; background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 4px solid #5897c2;">
+                    <span style="font-size: 1.1em; color: #e0e0e0;">{emoji} {emotion}: <strong>{percentage:.1f}%</strong></span>
                 </div>
                 """, unsafe_allow_html=True)
 
-            except Exception as e:
-                st.error(f"⚠ Error during prediction: {str(e)}")
-                st.info("Please make sure the model file exists and the prediction function works correctly.")
+        #st.markdown('</div>', unsafe_allow_html=True)
 
-# Close content container
-st.markdown('</div>', unsafe_allow_html=True)
+    with result_col2:
+        # Create a donut chart with brand colors
+        fig = go.Figure(data=[go.Pie(
+            labels=[f"{emoji_map[emotion]} {emotion}" for emotion in class_names],
+            values=[prob * 100 for prob in all_probs],
+            hole=.3,
+            marker_colors=["#254e94", '#4caf50', '#607d8b', '#5897c2']
+        )])
+
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig.update_layout(
+            title="Emotion Distribution",
+            annotations=[dict(text='Confidence', x=0.5, y=0.5, font_size=16, showarrow=False)],
+            height=400,
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white')
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+        
+    # Confidence indicator
+    max_confidence = all_probs[max_index] * 100
+    if max_confidence > 80:
+        confidence_color = "#4caf50"
+        confidence_text = "High Confidence"
+    elif max_confidence > 60:
+        confidence_color = "#5897c2"
+        confidence_text = "Medium Confidence"
+    else:
+        confidence_color = "#f44336"
+        confidence_text = "Low Confidence"
+
+    st.markdown(f"""
+    <div style="text-align: center; margin: 2rem 0;">
+        <span style="background: {confidence_color}; color: white; padding: 0.5rem 1rem; 
+        border-radius: 20px; font-weight: bold;">
+            🎯 {confidence_text}: {max_confidence:.1f}%
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Footer with enhanced styling
 st.markdown("---")
