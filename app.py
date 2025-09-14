@@ -50,14 +50,14 @@ def create_css_with_banner():
     banner_paths = ["banner01.png", "images/banner01.png", "assets/banner01.png", "./banner01.png"]
     banner_base64 = None
     banner_found = False
-    
+
     for path in banner_paths:
         if os.path.exists(path):
             banner_base64 = get_base64_of_bin_file(path)
             if banner_base64:
                 banner_found = True
                 break
-    
+
     # CSS สำหรับ background
     if banner_base64:
         banner_bg = f"""
@@ -66,17 +66,12 @@ def create_css_with_banner():
         background-position: center center;
         """
     else:
-        # fallback gradient สีฟ้า
-        banner_bg = """
-        background: linear-gradient(
-            135deg,
-            #112e63 0%,
-            #1a3a70 20%,
-            #2146a0 40%,
-            #5897c2 60%,
-            #7db3d3 80%,
-            #a8d0e6 100%
-        );
+        # ใช้ raw GitHub image แทน gradient
+        banner_url = "https://raw.githubusercontent.com/aoixcrx/emotion-app/main/banner01.png"
+        banner_bg = f"""
+        background: url("{banner_url}") no-repeat center center;
+        background-size: cover;
+        background-position: center center;
         """
 
     return f"""
@@ -185,11 +180,11 @@ def create_css_with_banner():
     color: #ffffff;
     font-size: 1 rem;
     font-weight: 700;
-     opacity: 0.85;
+    opacity: 0.85;
 }}
 
 .brain-icon {{
-      font-size: 1.8rem;
+    font-size: 1.8rem;
     color: #fff !important;
 }}
 
