@@ -1147,7 +1147,7 @@ with col1:
     if uploaded_image is not None:
         image = Image.open(uploaded_image).convert("RGB")
         #st.image(image, caption="Uploaded Image", use_container_width=True)
-        st.image(image, caption="Uploaded Image", width = 650, use_container_width=False)
+        st.image(image, caption="Uploaded Image", width = 650, height = 500, use_container_width=False)
 
 with col2:
     st.markdown("""
