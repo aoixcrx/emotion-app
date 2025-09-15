@@ -1110,8 +1110,7 @@ def load_model():
 model, device = load_model()
 
 # Main Content Area
-#col1, col2 = st.columns([1, 1])
-col1, col2, col3 = st.columns([1, 2, 1])
+col1, col2 = st.columns([1, 1])
 
 with col1:
     st.markdown("""
@@ -1148,7 +1147,7 @@ with col1:
     if uploaded_image is not None:
         image = Image.open(uploaded_image).convert("RGB")
         #st.image(image, caption="Uploaded Image", use_container_width=True)
-        st.image(image, caption="Uploaded Image", width = 500, use_container_width=False)
+        st.image(image, caption="Uploaded Image", width = 650, use_container_width=False)
 
 with col2:
     st.markdown("""
