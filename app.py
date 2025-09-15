@@ -1146,7 +1146,8 @@ with col1:
     image = None
     if uploaded_image is not None:
         image = Image.open(uploaded_image).convert("RGB")
-        st.image(image, caption="Uploaded Image", use_container_width=True)
+        #st.image(image, caption="Uploaded Image", use_container_width=True)
+        st.image(image, caption="Uploaded Image", width = 500, use_container_width=False)
        
         #if 'current_image' not in st.session_state or st.session_state.current_image != uploaded_image.name:
            #st.session_state.prediction_done = False
